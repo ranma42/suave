@@ -270,7 +270,7 @@ type LibUvSocket(pool : ConcurrentPool<OperationPair>,
     this.uv_connection_cb <- null
 
 type LibUvServer(maxConcurrentOps, bufferManager, logger : Logger,
-                 binding,
+                 binding : SocketBindingRange,
                  startData, serveClient,
                  acceptingConnections: AsyncResultCell<StartedData>,
                  event : ManualResetEvent) =
@@ -291,7 +291,6 @@ type LibUvServer(maxConcurrentOps, bufferManager, logger : Logger,
   let server = createHandle <| uv_handle_size(uv_handle_type.UV_TCP)
 
   let ip = binding.ip.ToString()
-  let port = int binding.port
 
   let stopLoopCallbackHandle = createHandle <| uv_handle_size(uv_handle_type.UV_ASYNC)
   let synchronizationContextCallback = createHandle <| uv_handle_size(uv_handle_type.UV_ASYNC)
@@ -306,13 +305,17 @@ type LibUvServer(maxConcurrentOps, bufferManager, logger : Logger,
     try
       uv_tcp_init(loop, server) |> checkStatus
       uv_tcp_nodelay(server, 1) |> checkStatus
-      if binding.ip.AddressFamily = AddressFamily.InterNetworkV6 then
-        uv_ip6_addr(ip, port, &addrV6) |> checkStatus
-        uv_tcp_bind6(server, &addrV6, 0u) |> checkStatus
-      else
-        uv_ip4_addr(ip, port, &addr) |> checkStatus
-        uv_tcp_bind(server, &addr, 0) |> checkStatus
-      let s = new LibUvSocket(opsPool, logger, serveClient, binding, loop,
+      let tryBind sockBind =
+        let port = int sockBind.port
+        if binding.ip.AddressFamily = AddressFamily.InterNetworkV6 then
+          uv_ip6_addr(ip, port, &addrV6) >= 0 &&
+          uv_tcp_bind6(server, &addrV6, 0u) >= 0
+        else
+          uv_ip4_addr(ip, port, &addr) >= 0 &&
+          uv_tcp_bind(server, &addr, 0) >= 0
+
+      let boundTo = Seq.find tryBind binding.bindings
+      let s = new LibUvSocket(opsPool, logger, serveClient, boundTo, loop,
                               bufferManager, startData, acceptingConnections,
                               this.synchronizationContext)
       s.initialize()
@@ -381,7 +384,7 @@ type LibUvServer(maxConcurrentOps, bufferManager, logger : Logger,
     uv_close(synchronizationContextCallback, this.uv_close_cb_thread)
     Log.info logger "Suave.LibUv.Tcp.LibUvServer.destroyLoopCallback" TraceHeader.empty "<--"
 
-let runServerLibUv logger maxConcurrentOps bufferSize autoGrow (binding: SocketBinding) startData (acceptingConnections: AsyncResultCell<StartedData>) serveClient =
+let runServerLibUv logger maxConcurrentOps bufferSize autoGrow (binding: SocketBindingRange) startData (acceptingConnections: AsyncResultCell<StartedData>) serveClient =
   let bufferManager = new BufferManager(bufferSize * (maxConcurrentOps + 1), bufferSize, logger, autoGrow)
   bufferManager.Init()
 

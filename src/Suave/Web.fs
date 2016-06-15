@@ -45,7 +45,7 @@ module Web =
         (config.bufferSize, config.maxOps) 
         webpart
         runtime 
-        (config.tcpServerFactory.create(config.logger, config.maxOps, config.bufferSize,config.autoGrow,runtime.matchedBinding.socketBinding))
+        (config.tcpServerFactory.create(config.logger, config.maxOps, config.bufferSize,config.autoGrow,runtime.matchedBinding.socketBindRange))
 
     let servers = 
        List.map (toRuntime >> startWebWorkerAsync) config.bindings

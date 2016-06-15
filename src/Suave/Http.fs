@@ -412,22 +412,33 @@ module Http =
     static member scheme_ = Property<HttpBinding,_> (fun x -> x.scheme) (fun v x -> { x with scheme = v })
     static member socketBinding_ = Property<HttpBinding,_> (fun x -> x.socketBinding) (fun v x -> { x with socketBinding=v })
 
+  type HttpBindingRange =
+    { scheme          : Protocol
+      socketBindRange : SocketBindingRange }
+
+    member x.uri (path : string) query =
+      if x.socketBindRange.firstPort = x.socketBindRange.lastPort then
+        { scheme        = x.scheme
+          socketBinding = x.socketBindRange.first }.uri path query
+      else
+        failwith "Multiple ports could be bound"
+
   [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
   module HttpBinding =
 
     let DefaultBindingPort = 8083us
 
     let defaults =
-      { scheme        = HTTP
-        socketBinding = SocketBinding.mk IPAddress.Loopback DefaultBindingPort }
+      { scheme          = HTTP
+        socketBindRange = SocketBindingRange.mk IPAddress.Loopback DefaultBindingPort }
 
-    let mk scheme (ip : IPAddress) (port : Port) = 
-      { scheme        = scheme
-        socketBinding = SocketBinding.mk ip port }
+    let mk scheme (ip : IPAddress) (port : Port) =
+      { scheme          = scheme
+        socketBindRange = SocketBindingRange.mk ip port }
 
-    let mkSimple scheme ip (port : int) = 
-      { scheme        = scheme
-        socketBinding = SocketBinding.mk (IPAddress.Parse ip) (uint16 port) } 
+    let mkSimple scheme ip (port : int) =
+      { scheme          = scheme
+        socketBindRange = SocketBindingRange.mk (IPAddress.Parse ip) (uint16 port) }
 
   type HttpContent =
     | NullContent
@@ -484,7 +495,7 @@ module Http =
       homeDirectory     : string
       compressionFolder : string
       logger            : Logger
-      matchedBinding    : HttpBinding
+      matchedBinding    : HttpBindingRange
       parsePostData     : bool
       cookieSerialiser  : CookieSerialiser
       tlsProvider       : TlsProvider

@@ -249,21 +249,27 @@ module Http =
     static member scheme_ : Property<HttpBinding,Protocol>
     static member socketBinding_ : Property<HttpBinding, SocketBinding>
 
+  type HttpBindingRange =
+    { scheme          : Protocol
+      socketBindRange : SocketBindingRange }
+
+    member uri : path:string -> query:string -> Uri
+
   [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
   module HttpBinding =
 
     val DefaultBindingPort : Port
 
-    /// This is the value of the default HttpBinding.
-    val defaults : HttpBinding
+    /// This is the value of the default HttpBindingRange.
+    val defaults : HttpBindingRange
 
-    /// Create a HttpBinding for the given protocol, an IP address to bind to and
+    /// Create a HttpBindingRange for the given protocol, an IP address to bind to and
     /// a port to listen on – this is the strongly typed overload.
-    val mk : scheme:Protocol -> ip:IPAddress -> port:Port -> HttpBinding
+    val mk : scheme:Protocol -> ip:IPAddress -> port:Port -> HttpBindingRange
 
     /// Create a HttpBinding for the given protocol, an IP address to bind to and
     /// a port to listen on – this is the "stringly typed" overload.
-    val mkSimple : scheme:Protocol -> ip:string -> port:int -> HttpBinding
+    val mkSimple : scheme:Protocol -> ip:string -> port:int -> HttpBindingRange
 
   type HttpContent =
     /// This is the default HttpContent. If you place this is a HttpResult the web
@@ -331,7 +337,7 @@ module Http =
       homeDirectory     : string
       compressionFolder : string
       logger            : Logger
-      matchedBinding    : HttpBinding
+      matchedBinding    : HttpBindingRange
       parsePostData     : bool
       cookieSerialiser  : CookieSerialiser
       tlsProvider       : TlsProvider
@@ -343,7 +349,7 @@ module Http =
     static member homeDirectory_ : Property<HttpRuntime, string>
     static member compressionFolder_ : Property<HttpRuntime, string>
     static member logger_ : Property<HttpRuntime, Logger>
-    static member matchedBinding_ : Property<HttpRuntime, HttpBinding>
+    static member matchedBinding_ : Property<HttpRuntime, HttpBindingRange>
     static member parsePostData_ : Property<HttpRuntime, bool>
     static member cookieSerialiser_ : Property<HttpRuntime, CookieSerialiser>
     static member tlsProvider_ : Property<HttpRuntime, TlsProvider>
@@ -443,7 +449,7 @@ module Http =
           -> mimeTypes:MimeTypesMap -> homeDirectory:string
           -> compressionFolder:string -> logger:Logger
           -> parsePostData:bool -> cookieSerialiser:CookieSerialiser
-          -> tlsProvider:TlsProvider -> hideHeader:bool -> binding:HttpBinding
+          -> tlsProvider:TlsProvider -> hideHeader:bool -> binding:HttpBindingRange
           -> HttpRuntime
 
   /// A module that provides functions to create a new HttpContext.

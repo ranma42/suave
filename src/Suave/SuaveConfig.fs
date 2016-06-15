@@ -9,7 +9,7 @@ open System
 /// <code>{ default_config with bindings = [ ... ] }</code>
 type SuaveConfig =
   { /// The bindings for the web server to launch with
-    bindings                : HttpBinding list
+    bindings                : HttpBindingRange list
 
     /// A server-key to use for cryptographic operations. When generated it
     /// should be completely random; you can share this key between load-balanced
@@ -121,7 +121,8 @@ module SuaveConfig =
       failwith "No bindings found for SuaveConfig."
 
     | b :: _ ->
-      b
+      { scheme        = b.scheme
+        socketBinding = b.socketBindRange.first }
 
   /// Construct a `System.Uri` from the first binding available in Suave, by
   /// giving a path and a uri.

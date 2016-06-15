@@ -16,12 +16,14 @@ let MaxBacklog = Int32.MaxValue
 type StartedData =
   { startCalledUtc : DateTimeOffset
     socketBoundUtc : DateTimeOffset option
-    binding        : SocketBinding }
+    binding        : SocketBindingRange
+    bound          : SocketBinding option }
 
   override x.ToString() =
+    let bound = x.bound |> Option.fold (fun _ t -> t) x.binding.first
     sprintf "%.3f ms with binding %O:%d"
       ((x.socketBoundUtc |> Option.fold (fun _ t -> t) x.startCalledUtc) - x.startCalledUtc).TotalMilliseconds
-      x.binding.ip x.binding.port
+      bound.ip bound.port
 
 /// Stop the TCP listener server
 let stopTcp (logger : Logger) reason (socket : Socket) =
@@ -84,7 +86,7 @@ let private aFewTimes f =
 // custom kernel with shorter TCP_TIMEWAIT_LEN in include/net/tcp.h
 let job logger
         (serveClient : TcpWorker<unit>)
-        binding
+        (binding : SocketBinding)
         (transport : ITransport)
         (bufferManager : BufferManager) = async {
   let intern = Log.intern logger "Suave.Tcp.job"
@@ -120,22 +122,28 @@ let job logger
 
 type TcpServer = StartedData -> AsyncResultCell<StartedData> -> TcpWorker<unit> -> Async<unit>
 
-let runServer logger maxConcurrentOps bufferSize autoGrow (binding: SocketBinding) startData
+let runServer logger maxConcurrentOps bufferSize autoGrow (binding: SocketBindingRange) startData
               (acceptingConnections: AsyncResultCell<StartedData>) serveClient = async {
   try
 
-    use listenSocket = new Socket(binding.endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
+    use listenSocket = new Socket(binding.ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
     listenSocket.NoDelay <- true;
 
     let transportPool, bufferManager = createPools listenSocket logger maxConcurrentOps bufferSize autoGrow
 
-    aFewTimes (fun () -> listenSocket.Bind binding.endpoint)
+    let tryBind () =
+      binding.bindings
+      |> Seq.find (fun b -> try listenSocket.Bind b.endpoint ; true with _ -> false)
+
+    let boundTo = aFewTimes tryBind
     listenSocket.Listen MaxBacklog
 
     use! disposable = Async.OnCancel(fun () -> stopTcp logger "tcpIpServer async cancelled" listenSocket)
     let! token = Async.CancellationToken
 
-    let startData = { startData with socketBoundUtc = Some (Globals.utcNow()) }
+    let startData = { startData with
+                        socketBoundUtc = Some (Globals.utcNow())
+                        bound = Some boundTo }
     acceptingConnections.complete startData |> ignore
 
     logger.Log LogLevel.Info <| fun _ ->
@@ -169,7 +177,7 @@ let runServer logger maxConcurrentOps bufferSize autoGrow (binding: SocketBindin
 /// yields when the full server is cancelled. If the 'has started listening' workflow
 /// returns None, then the start timeout expired.
 let startTcpIpServerAsync (serveClient : TcpWorker<unit>)
-                          (binding     : SocketBinding)
+                          (binding     : SocketBindingRange)
                           (runServer   : TcpServer) =
 
   let acceptingConnections = new AsyncResultCell<StartedData>()
@@ -177,7 +185,8 @@ let startTcpIpServerAsync (serveClient : TcpWorker<unit>)
   let startData =
         { startCalledUtc = Globals.utcNow ()
           socketBoundUtc = None
-          binding        = binding }
+          binding        = binding
+          bound          = None }
 
   acceptingConnections.awaitResult()
     , runServer startData acceptingConnections serveClient

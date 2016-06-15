@@ -6,7 +6,7 @@ open Suave.Tcp
 
 type TcpServerFactory =
   /// This is the factory's factory method. It's almost like OOP again!
-  abstract member create : logger:Logger * maxOps:int * bufferSize:int * autoGrow:bool* binding:SocketBinding
+  abstract member create : logger:Logger * maxOps:int * bufferSize:int * autoGrow:bool* binding:SocketBindingRange
                         -> TcpServer
 
 type DefaultTcpServerFactory() =
