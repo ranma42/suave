@@ -50,7 +50,6 @@ type ConnectionFacade(ctx) =
   let lineBuffer = ctx.connection.lineBuffer
   let logger = ctx.runtime.logger
   let trace = ctx.request.trace
-  let matchedBinding = ctx.runtime.matchedBinding
 
   let segments = new LinkedList<BufferSegment>()
   let files = List<HttpUpload>()
@@ -454,9 +453,12 @@ type ConnectionFacade(ctx) =
       let! a = parsePostData (headers %% "content-length") (headers %% "content-type")
       ()
 
+    let binding : HttpBinding = { scheme        = ctx.runtime.matchedBinding.scheme
+                                  socketBinding = ctx.connection.socketBinding }
+
     let request =
       { httpVersion      = httpVersion
-        url              = matchedBinding.uri path rawQuery
+        url              = binding.uri path rawQuery
         host             = host
         ``method``       = meth  
         headers          = headers
