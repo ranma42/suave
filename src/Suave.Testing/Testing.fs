@@ -152,7 +152,7 @@ let send (client : HttpClient) (timeout : TimeSpan) (ctx : SuaveTestCtx) (reques
   send.Result
 
 let endpointUri (suaveConfig : SuaveConfig) =
-  Uri(suaveConfig.bindings.Head.ToString())
+  SuaveConfig.firstBindingUri suaveConfig "" ""
 
 /// This is the main function for the testing library; it lets you assert
 /// on the request/response values while ensuring deterministic
