@@ -838,7 +838,7 @@ module OwinServerFactory =
         let port   = get dic "port" : string
         let ip     = read dic "ip" (fun () -> "127.0.0.1") : string
         let scheme = getDefault dic "certificate" (fun _ -> HTTP) HTTP
-        { scheme = scheme; socketBinding = { ip = IPAddress.Parse ip; port = uint16 port } })
+        HttpBinding.mkSimple scheme ip (int port))
       |> List.ofSeq
 
     let serverCts = new CancellationTokenSource()
