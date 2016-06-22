@@ -38,6 +38,10 @@ module Connection =
   let inline send (cn :Connection) (buf : ByteSegment) =
     cn.transport.write buf
 
+  let socketBinding_ =
+    (fun x -> x.socketBinding),
+    fun v x -> { x with socketBinding = v }
+
   let transport_ =
     (fun x -> x.transport),
     fun v x -> { x with transport = v }

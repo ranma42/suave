@@ -321,8 +321,8 @@ module OwinApp =
         let binding =
           Map [ "scheme", x.runtime.matchedBinding.scheme.ToString()
                 "host", x.request.host
-                "port", x.runtime.matchedBinding.socketBinding.port.ToString(CultureInfo.InvariantCulture)
-                "path", x.runtime.matchedBinding.socketBinding.port.ToString(CultureInfo.InvariantCulture) ]
+                "port", x.connection.socketBinding.port.ToString(CultureInfo.InvariantCulture)
+                "path", x.connection.socketBinding.port.ToString(CultureInfo.InvariantCulture) ]
           |> Map.map (fun key value -> box value)
           :> IDictionary<string, obj>
         List<_> [ binding ] :> IList<_>
@@ -493,8 +493,8 @@ module OwinApp =
         OwinConstants.CommonKeys.clientCertificate, constant Unchecked.defaultof<Security.Cryptography.X509Certificates.X509Certificate>
         OwinConstants.CommonKeys.onSendingHeaders,  onSendingHeadersLens <--> untyped
         OwinConstants.CommonKeys.isLocal,           HttpContext.isLocal_ <--> untyped
-        OwinConstants.CommonKeys.localIpAddress,    HttpContext.runtime_ >--> HttpRuntime.matchedBinding_ >--> HttpBinding.socketBinding_ >--> SocketBinding.ip_ <--> stringlyTyped (sprintf "%O") IPAddress.Parse <--> untyped
-        OwinConstants.CommonKeys.localPort,         HttpContext.runtime_  >--> HttpRuntime.matchedBinding_ >--> HttpBinding.socketBinding_ >--> SocketBinding.port_ <--> stringlyTyped string uint16 <--> untyped
+        OwinConstants.CommonKeys.localIpAddress,    HttpContext.connection_ >--> Connection.socketBinding_ >--> SocketBinding.ip_ <--> stringlyTyped (sprintf "%O") IPAddress.Parse <--> untyped
+        OwinConstants.CommonKeys.localPort,         HttpContext.connection_  >--> Connection.socketBinding_ >--> SocketBinding.port_ <--> stringlyTyped string uint16 <--> untyped
         OwinConstants.CommonKeys.remoteIpAddress,   HttpContext.clientIp_ <--> stringlyTyped (sprintf "%O") IPAddress.Parse <--> untyped
         OwinConstants.CommonKeys.remotePort,        HttpContext.clientPort_ <--> stringlyTyped string uint16 <--> untyped
         OwinConstants.CommonKeys.traceOutput,       HttpContext.runtime_ >--> HttpRuntime.logger_ >--> ((fun x -> textWriter x), (fun v x -> x)) <--> untyped
